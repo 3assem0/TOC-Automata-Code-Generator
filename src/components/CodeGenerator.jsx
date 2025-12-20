@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { generatePython, generateJavaScript, generateJava } from '../utils/codeGenerators';
+import {
+  generatePython,
+  generateJavaScript,
+  generateJava,
+} from '../utils/codeGenerators';
 
 /**
  * Code generator and display component
@@ -30,7 +34,7 @@ const CodeGenerator = ({ automata }) => {
       default:
         code = '// Unknown language';
     }
-    
+
     setGeneratedCode(code);
     setCopied(false);
   };
@@ -49,9 +53,9 @@ const CodeGenerator = ({ automata }) => {
     const extensions = {
       python: 'py',
       javascript: 'js',
-      java: 'java'
+      java: 'java',
     };
-    
+
     const blob = new Blob([generatedCode], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -66,7 +70,7 @@ const CodeGenerator = ({ automata }) => {
   return (
     <div className="code-generator">
       <h3> Generate Code</h3>
-      
+
       <div className="code-controls">
         <select
           value={selectedLanguage}
@@ -77,18 +81,18 @@ const CodeGenerator = ({ automata }) => {
           <option value="javascript">JavaScript</option>
           <option value="java">Java</option>
         </select>
-        
+
         <button onClick={handleGenerate} className="btn btn-primary">
           Generate
         </button>
-        
+
         {generatedCode && (
           <>
             <button onClick={handleCopy} className="btn btn-secondary">
-              {copied ? '✓ Copied!' : '📋 Copy'}
+              {copied ? '✓ Copied!' : ' Copy'}
             </button>
             <button onClick={handleDownload} className="btn btn-secondary">
-              ⬇️ Download
+              ⬇ Download
             </button>
           </>
         )}

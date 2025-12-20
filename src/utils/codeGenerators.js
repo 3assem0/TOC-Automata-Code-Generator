@@ -36,19 +36,24 @@ const generatePythonDFA = (automata) => {
   code += `        # Transition logic\n`;
   
   // Generate transition logic
+  let stateIndex = 0;
   for (const state of states) {
     const stateTransitions = transitions[state] || {};
-    code += `        if state == "${state}":\n`;
+    const ifStmt = stateIndex === 0 ? 'if' : 'elif';
+    code += `        ${ifStmt} state == "${state}":\n`;
     
+    let symbolIndex = 0;
     let hasTransitions = false;
     for (const symbol of alphabet) {
       if (stateTransitions[symbol]) {
         const nextState = Array.isArray(stateTransitions[symbol]) 
           ? stateTransitions[symbol][0] 
           : stateTransitions[symbol];
-        code += `            if symbol == "${symbol}":\n`;
+        const subIfStmt = symbolIndex === 0 ? 'if' : 'elif';
+        code += `            ${subIfStmt} symbol == "${symbol}":\n`;
         code += `                state = "${nextState}"\n`;
         hasTransitions = true;
+        symbolIndex++;
       }
     }
     
@@ -58,6 +63,7 @@ const generatePythonDFA = (automata) => {
     } else {
       code += `            return False  # No transitions defined\n`;
     }
+    stateIndex++;
   }
   
   code += `    \n`;
@@ -172,20 +178,25 @@ const generateJavaScriptDFA = (automata) => {
   code += `    // Transition logic\n`;
   
   // Generate transition logic
+  let stateIndex = 0;
   for (const state of states) {
     const stateTransitions = transitions[state] || {};
-    code += `    if (state === "${state}") {\n`;
+    const ifStmt = stateIndex === 0 ? 'if' : 'else if';
+    code += `    ${ifStmt} (state === "${state}") {\n`;
     
+    let symbolIndex = 0;
     let hasTransitions = false;
     for (const symbol of alphabet) {
       if (stateTransitions[symbol]) {
         const nextState = Array.isArray(stateTransitions[symbol]) 
           ? stateTransitions[symbol][0] 
           : stateTransitions[symbol];
-        code += `      if (symbol === "${symbol}") {\n`;
+        const subIfStmt = symbolIndex === 0 ? 'if' : 'else if';
+        code += `      ${subIfStmt} (symbol === "${symbol}") {\n`;
         code += `        state = "${nextState}";\n`;
         code += `      } `;
         hasTransitions = true;
+        symbolIndex++;
       }
     }
     
@@ -197,6 +208,7 @@ const generateJavaScriptDFA = (automata) => {
       code += `      return false; // No transitions defined\n`;
     }
     code += `    }\n`;
+    stateIndex++;
   }
   
   code += `  }\n`;
@@ -334,35 +346,47 @@ const generateJavaDFA = (automata) => {
   code += `            String symbol = String.valueOf(c);\n`;
   code += `            \n`;
   code += `            // Transition logic\n`;
+  code += `            boolean transitioned = false;\n`;
+  code += `            \n`;
   
   // Generate transition logic
-  for (const state of states) {
-    const stateTransitions = transitions[state] || {};
-    code += `            if (state.equals("${state}")) {\n`;
+  let stateIndex = 0;
+  for (const s of states) { // Renamed 'state' to 's' to avoid conflict with 'state' variable in generated Java code
+    const stateTransitions = transitions[s] || {};
+    const ifStmt = stateIndex === 0 ? "if" : "else if";
+    code += `            ${ifStmt} (state.equals("${s}")) {\n`;
     
+    let symbolIndex = 0;
     let hasTransitions = false;
-    for (const symbol of alphabet) {
-      if (stateTransitions[symbol]) {
-        const nextState = Array.isArray(stateTransitions[symbol]) 
-          ? stateTransitions[symbol][0] 
-          : stateTransitions[symbol];
-        code += `                if (symbol.equals("${symbol}")) {\n`;
+    for (const sym of alphabet) { // Renamed 'symbol' to 'sym' to avoid conflict with 'symbol' variable in generated Java code
+      if (stateTransitions[sym]) {
+        const nextState = Array.isArray(stateTransitions[sym]) 
+          ? stateTransitions[sym][0] 
+          : stateTransitions[sym];
+        const subIfStmt = symbolIndex === 0 ? "if" : "else if";
+        code += `                ${subIfStmt} (symbol.equals("${sym}")) {\n`;
         code += `                    state = "${nextState}";\n`;
+        code += `                    transitioned = true;\n`; // Mark as transitioned
         code += `                } `;
         hasTransitions = true;
+        symbolIndex++;
       }
     }
     
     if (hasTransitions) {
       code += `else {\n`;
-      code += `                    return false; // Invalid symbol\n`;
+      code += `                    return false; // Invalid symbol for this state\n`;
       code += `                }\n`;
     } else {
-      code += `                return false; // No transitions defined\n`;
+      code += `                return false; // No transitions defined for this state\n`;
     }
     code += `            }\n`;
+    stateIndex++;
   }
   
+  code += `            if (!transitioned) {\n`;
+  code += `                return false; // No transition found for current state and symbol\n`;
+  code += `            }\n`;
   code += `        }\n`;
   code += `        \n`;
   code += `        // Check if final state is accepting\n`;

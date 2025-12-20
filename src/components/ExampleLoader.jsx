@@ -8,9 +8,6 @@ const ExampleLoader = ({ onLoadExample }) => {
   const [selectedExample, setSelectedExample] = useState('');
 
   const examples = [
-    { key: 'binaryEndingIn01', name: "Binary strings ending in '01'" },
-    { key: 'evenAs', name: "Even number of 'a's" },
-    { key: 'divisibleBy3', name: 'Binary numbers divisible by 3' },
     { key: 'containsAB', name: "Contains substring 'ab' (NFA)" },
     { key: 'epsilonExample', name: "Strings ending with 'abb' (ε-NFA)" }
   ];

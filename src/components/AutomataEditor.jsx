@@ -82,7 +82,7 @@ const AutomataEditor = ({
           fitView
           attributionPosition="bottom-left"
         >
-          <Background color="#e2e8f0" gap={20} size={1} />
+          <Background color="#176ee0ff" gap={20} size={1} />
           <Controls className="bg-white border-gray-200 shadow-sm" />
           <MiniMap
             nodeColor={(node) => {
