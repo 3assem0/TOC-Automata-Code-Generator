@@ -1,5 +1,14 @@
 // Code generators for Python, JavaScript, and Java
 
+// Sample inputs built from the automaton's own alphabet, so the demo output is meaningful
+const sampleTests = (alphabet) => {
+  const syms = alphabet.length ? alphabet : ['a'];
+  const joined = syms.join('');
+  const tests = ['', ...syms, joined, [...syms].reverse().join(''), joined + joined, syms[0].repeat(3)];
+  return [...new Set(tests)];
+};
+const testList = (alphabet) => sampleTests(alphabet).map(t => `"${t}"`).join(', ');
+
 /**
  * Generate Python code from automata
  */
@@ -72,7 +81,7 @@ const generatePythonDFA = (automata) => {
   
   code += `# Test examples\n`;
   code += `if __name__ == "__main__":\n`;
-  code += `    test_strings = ["", "a", "ab", "aba"]\n`;
+  code += `    test_strings = [${testList(alphabet)}]\n`;
   code += `    for test in test_strings:\n`;
   code += `        result = run_automaton(test)\n`;
   code += `        print(f"'{test}' -> {result}")\n`;
@@ -135,7 +144,7 @@ const generatePythonNFA = (automata) => {
   
   code += `# Test examples\n`;
   code += `if __name__ == "__main__":\n`;
-  code += `    test_strings = ["", "a", "ab", "aba"]\n`;
+  code += `    test_strings = [${testList(alphabet)}]\n`;
   code += `    for test in test_strings:\n`;
   code += `        result = run_automaton(test)\n`;
   code += `        print(f"'{test}' -> {result}")\n`;
@@ -218,7 +227,7 @@ const generateJavaScriptDFA = (automata) => {
   code += `}\n\n`;
   
   code += `// Test examples\n`;
-  code += `const testStrings = ["", "a", "ab", "aba"];\n`;
+  code += `const testStrings = [${testList(alphabet)}];\n`;
   code += `testStrings.forEach(test => {\n`;
   code += `  const result = runAutomaton(test);\n`;
   code += `  console.log(\`'\${test}' -> \${result}\`);\n`;
@@ -300,7 +309,7 @@ const generateJavaScriptNFA = (automata) => {
   code += `}\n\n`;
   
   code += `// Test examples\n`;
-  code += `const testStrings = ["", "a", "ab", "aba"];\n`;
+  code += `const testStrings = [${testList(alphabet)}];\n`;
   code += `testStrings.forEach(test => {\n`;
   code += `  const result = runAutomaton(test);\n`;
   code += `  console.log(\`'\${test}' -> \${result}\`);\n`;
@@ -395,7 +404,7 @@ const generateJavaDFA = (automata) => {
   code += `    }\n\n`;
   
   code += `    public static void main(String[] args) {\n`;
-  code += `        String[] testStrings = {"", "a", "ab", "aba"};\n`;
+  code += `        String[] testStrings = {${testList(alphabet)}};\n`;
   code += `        for (String test : testStrings) {\n`;
   code += `            boolean result = runAutomaton(test);\n`;
   code += `            System.out.println("'" + test + "' -> " + result);\n`;
@@ -421,20 +430,22 @@ const generateJavaNFA = (automata) => {
   
   code += `    static {\n`;
   code += `        transitions = new HashMap<>();\n`;
-  for (const state of states) {
+  // Index-based variable names: state names aren't always valid Java identifiers (e.g. "s-1", "2")
+  states.forEach((state, i) => {
     if (transitions[state]) {
-      code += `        Map<String, Object> ${state}Trans = new HashMap<>();\n`;
+      const varName = `trans${i}`;
+      code += `        Map<String, Object> ${varName} = new HashMap<>();\n`;
       for (const symbol in transitions[state]) {
         const next = transitions[state][symbol];
         if (Array.isArray(next)) {
-          code += `        ${state}Trans.put("${symbol}", Arrays.asList(${next.map(s => `"${s}"`).join(', ')}));\n`;
+          code += `        ${varName}.put("${symbol}", Arrays.asList(${next.map(s => `"${s}"`).join(', ')}));\n`;
         } else {
-          code += `        ${state}Trans.put("${symbol}", "${next}");\n`;
+          code += `        ${varName}.put("${symbol}", "${next}");\n`;
         }
       }
-      code += `        transitions.put("${state}", ${state}Trans);\n`;
+      code += `        transitions.put("${state}", ${varName});\n`;
     }
-  }
+  });
   code += `    }\n\n`;
   
   code += `    private static Set<String> epsilonClosure(Set<String> statesSet) {\n`;
@@ -497,7 +508,7 @@ const generateJavaNFA = (automata) => {
   code += `    }\n\n`;
   
   code += `    public static void main(String[] args) {\n`;
-  code += `        String[] testStrings = {"", "a", "ab", "aba"};\n`;
+  code += `        String[] testStrings = {${testList(alphabet)}};\n`;
   code += `        for (String test : testStrings) {\n`;
   code += `            boolean result = runAutomaton(test);\n`;
   code += `            System.out.println("'" + test + "' -> " + result);\n`;

@@ -9,9 +9,14 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import StateNode from './StateNode';
+import SelfLoopEdge from './SelfLoopEdge';
 
 const nodeTypes = {
   stateNode: StateNode,
+};
+
+const edgeTypes = {
+  selfLoop: SelfLoopEdge,
 };
 
 /**
@@ -37,6 +42,7 @@ const AutomataEditor = ({
       return {
         background: 'var(--highlight-color)',
         boxShadow: '0 0 20px var(--highlight-color)',
+        borderRadius: '50%',
       };
     }
     return {};
@@ -78,6 +84,7 @@ const AutomataEditor = ({
           onEdgeUpdate={onEdgeUpdate}
           onInit={onInit}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           defaultEdgeOptions={defaultEdgeOptions}
           fitView
           attributionPosition="bottom-left"

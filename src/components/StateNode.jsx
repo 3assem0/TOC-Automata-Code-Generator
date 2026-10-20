@@ -51,24 +51,28 @@ const StateNode = ({ data, isConnectable }) => {
       <Handle
         type="target"
         position={Position.Top}
+        id="top"
         isConnectable={isConnectable}
         className="node-handle"
       />
       <Handle
         type="source"
         position={Position.Bottom}
+        id="bottom"
         isConnectable={isConnectable}
         className="node-handle"
       />
       <Handle
         type="target"
         position={Position.Left}
+        id="left"
         isConnectable={isConnectable}
         className="node-handle"
       />
       <Handle
         type="source"
         position={Position.Right}
+        id="right"
         isConnectable={isConnectable}
         className="node-handle"
       />

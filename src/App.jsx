@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNodesState, useEdgesState, addEdge } from 'reactflow';
 import AutomataEditor from './components/AutomataEditor';
 import ControlPanel from './components/ControlPanel';
@@ -12,10 +12,17 @@ import './App.css';
 let nodeId = 0;
 const getNodeId = () => `q${nodeId++}`;
 
+// Self-loops need their own edge type; React Flow's smoothstep collapses them to a stub
+const makeEdge = (props) => ({
+  ...props,
+  type: props.source === props.target ? 'selfLoop' : 'smoothstep',
+});
+
 function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const selectedNode = nodes.find(n => n.id === selectedNodeId) || null;
   const [highlightedStates, setHighlightedStates] = useState([]);
   const [automata, setAutomata] = useState({
     states: [],
@@ -64,18 +71,22 @@ function App() {
 
     const alphabet = extractAlphabet(transitions);
 
-    setAutomata({
-      states,
-      alphabet,
-      start,
-      accepting,
-      transitions
-    });
+    const next = { states, alphabet, start, accepting, transitions };
+    setAutomata(prev => JSON.stringify(prev) === JSON.stringify(next) ? prev : next);
   }, []);
+
+  // Keep the automaton in sync with the canvas, including deletions made with the Delete/Backspace key
+  useEffect(() => {
+    updateAutomata(nodes, edges);
+  }, [nodes, edges, updateAutomata]);
 
   // Add new state
   const handleAddState = useCallback((stateName) => {
     const id = stateName || getNodeId();
+    if (nodes.some(n => n.id === id)) {
+      alert(`State '${id}' already exists`);
+      return;
+    }
     const newNode = {
       id,
       type: 'stateNode',
@@ -92,8 +103,7 @@ function App() {
     
     const updatedNodes = [...nodes, newNode];
     setNodes(updatedNodes);
-    updateAutomata(updatedNodes, edges);
-  }, [nodes, edges, setNodes, updateAutomata]);
+  }, [nodes, edges, setNodes]);
 
   // Remove state
   const handleRemoveState = useCallback((stateId) => {
@@ -101,9 +111,8 @@ function App() {
     const updatedEdges = edges.filter(e => e.source !== stateId && e.target !== stateId);
     setNodes(updatedNodes);
     setEdges(updatedEdges);
-    setSelectedNode(null);
-    updateAutomata(updatedNodes, updatedEdges);
-  }, [nodes, edges, setNodes, setEdges, updateAutomata]);
+    setSelectedNodeId(null);
+  }, [nodes, edges, setNodes, setEdges]);
 
   // Set start state
   const handleSetStart = useCallback((stateId) => {
@@ -115,8 +124,7 @@ function App() {
       }
     }));
     setNodes(updatedNodes);
-    updateAutomata(updatedNodes, edges);
-  }, [nodes, edges, setNodes, updateAutomata]);
+  }, [nodes, edges, setNodes]);
 
   // Toggle accepting state
   const handleSetAccepting = useCallback((stateId) => {
@@ -128,28 +136,24 @@ function App() {
       }
     }));
     setNodes(updatedNodes);
-    updateAutomata(updatedNodes, edges);
-  }, [nodes, edges, setNodes, updateAutomata]);
+  }, [nodes, edges, setNodes]);
 
   // Handle edge connection
   const onConnect = useCallback((params) => {
     // Prompt for transition symbol
     const symbol = prompt('Enter transition symbol (use ε for epsilon, separate multiple with commas):');
-    if (symbol !== null) {
-      const newEdge = {
-        ...params,
-        label: symbol,
-        type: 'smoothstep',
-      };
-      const updatedEdges = addEdge(newEdge, edges);
+    if (symbol !== null && symbol.trim()) {
+      const existing = edges.find(e => e.source === params.source && e.target === params.target);
+      const updatedEdges = existing
+        ? edges.map(e => e.id === existing.id ? { ...e, label: `${e.label}, ${symbol.trim()}` } : e)
+        : addEdge(makeEdge({ ...params, label: symbol.trim() }), edges);
       setEdges(updatedEdges);
-      updateAutomata(nodes, updatedEdges);
     }
-  }, [edges, nodes, setEdges, updateAutomata]);
+  }, [edges, setEdges]);
 
   // Handle node click
   const handleNodeClick = useCallback((event, node) => {
-    setSelectedNode(node);
+    setSelectedNodeId(node.id);
   }, []);
 
   // Handle edge click
@@ -160,9 +164,8 @@ function App() {
         e.id === edge.id ? { ...e, label: newLabel } : e
       );
       setEdges(updatedEdges);
-      updateAutomata(nodes, updatedEdges);
     }
-  }, [edges, nodes, setEdges, updateAutomata]);
+  }, [edges, setEdges]);
 
   // Export as JSON
   const handleExportJSON = useCallback(() => {
@@ -189,11 +192,10 @@ function App() {
   const handleClear = useCallback(() => {
     setNodes([]);
     setEdges([]);
-    setSelectedNode(null);
+    setSelectedNodeId(null);
     setHighlightedStates([]);
     nodeId = 0;
-    updateAutomata([], []);
-  }, [setNodes, setEdges, updateAutomata]);
+  }, [setNodes, setEdges]);
 
   // Load example
   const handleLoadExample = useCallback((exampleKey) => {
@@ -213,8 +215,7 @@ function App() {
     }));
 
     // Create edges from transitions
-    const newEdges = [];
-    let edgeId = 0;
+    const edgeMap = new Map();
     
     for (const source in example.transitions) {
       for (const symbol in example.transitions[source]) {
@@ -222,23 +223,23 @@ function App() {
         const targetArray = Array.isArray(targets) ? targets : [targets];
         
         targetArray.forEach(target => {
-          newEdges.push({
-            id: `e${edgeId++}`,
-            source,
-            target,
-            label: symbol,
-            type: 'smoothstep',
-          });
+          const key = `${source}->${target}`;
+          if (edgeMap.has(key)) {
+            edgeMap.get(key).label += `, ${symbol}`;
+          } else {
+            // Route state-to-state edges side to side so they don't collide with self-loops on top
+            edgeMap.set(key, makeEdge({ id: `e${edgeMap.size}`, source, target, label: symbol, sourceHandle: 'right', targetHandle: 'left' }));
+          }
         });
       }
     }
+    const newEdges = [...edgeMap.values()];
 
     setNodes(newNodes);
     setEdges(newEdges);
-    setSelectedNode(null);
+    setSelectedNodeId(null);
     setHighlightedStates([]);
-    updateAutomata(newNodes, newEdges);
-  }, [setNodes, setEdges, updateAutomata]);
+  }, [setNodes, setEdges]);
 
   return (
     <div className="app">

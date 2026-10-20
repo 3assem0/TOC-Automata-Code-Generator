@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
  * Simulator component
@@ -10,6 +10,14 @@ const Simulator = ({ automata, onStateHighlight }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [executionPath, setExecutionPath] = useState([]);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  // A previous run's result no longer applies once the automaton is edited
+  useEffect(() => {
+    setResult(null);
+    setCurrentStep(0);
+    setExecutionPath([]);
+    onStateHighlight([]);
+  }, [automata, onStateHighlight]);
 
   const simulateDFA = (input) => {
     const { start, transitions, accepting } = automata;
@@ -179,7 +187,7 @@ const Simulator = ({ automata, onStateHighlight }) => {
           {executionPath.length > 0 && (
             <div className="execution-controls">
               <div className="step-info">
-                Step {currentStep + 1} of {executionPath.length}
+                Step {currentStep + 1} of {executionPath.length}{' · '}
                 {Array.isArray(executionPath[currentStep]) ? (
                   <span className="current-states">
                     States: {executionPath[currentStep].join(', ')}

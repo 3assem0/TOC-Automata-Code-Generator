@@ -369,3 +369,12 @@
     max-height: 500px;
   }
 }
+
+/* Self-loop transition label (matches React Flow edge labels) */
+.self-loop-label {
+  font-size: 12px;
+  padding: 0 4px;
+  background: #fff;
+  color: var(--text-primary);
+  pointer-events: none;
+}
